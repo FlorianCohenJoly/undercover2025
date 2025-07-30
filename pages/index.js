@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import GameSetup from '../components/GameSetup';
 import GamePlay from '../components/GamePlay';
+import GameDiscussion from '../components/GameDiscussion';
 import GameVoting from '../components/GameVoting';
 import GameEnd from '../components/GameEnd';
 import GameReveal from '../components/GameReveal';
 import { getWordsForCategory } from '../data/words';
 
 export default function Home() {
-  const [gameState, setGameState] = useState('setup');
+  const [gameState, setGameState] = useState('setup'); // 'setup', 'playing', 'discussion', 'voting', 'gameEnd', 'revealing'
   const [players, setPlayers] = useState(['']);
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [gameConfig, setGameConfig] = useState({
@@ -63,7 +64,7 @@ export default function Home() {
       round: 1,
       winner: null,
       winnerType: null,
-      skipWordDistribution: false // Nouveau flag pour savoir si on doit skip
+      skipWordDistribution: false
     });
 
     setCurrentPlayer(0);
@@ -87,9 +88,14 @@ export default function Home() {
       console.log('🔄 Passage au joueur:', nextPlayerIndex);
       setCurrentPlayer(nextPlayerIndex);
     } else {
-      console.log('🗳️ PASSAGE AU VOTE ! Tous les joueurs ont vu leur mot');
-      setGameState('voting');
+      console.log('🗣️ PASSAGE À LA DISCUSSION ! Tous les joueurs ont vu leur mot');
+      setGameState('discussion');
     }
+  };
+
+  const startVoting = () => {
+    console.log('🗳️ Passage du discussion au vote');
+    setGameState('voting');
   };
 
   const handleWhiteWins = (playerName, guessedWord) => {
@@ -138,7 +144,7 @@ export default function Home() {
     console.log('📊 Undercover restants:', undercoversCount);
     console.log('📊 Blancs restants:', whitesCount);
 
-    // CONDITIONS DE VICTOIRE CORRIGÉES
+    // CONDITIONS DE VICTOIRE
     if (undercoversCount === 0) {
       console.log('🏁 FIN DE PARTIE ! Les Civils ont gagné ! (Plus d\'undercover)');
       updatedGame.winnerType = 'civils';
@@ -151,36 +157,19 @@ export default function Home() {
       setCurrentGame(updatedGame);
       setGameState('gameEnd');
     } else if (remainingPlayers.length <= 2) {
-      // Seule exception : s'il ne reste que 2 joueurs ou moins, c'est ingagnable
       console.log('🏁 FIN DE PARTIE ! Trop peu de joueurs restants (≤2)');
-      updatedGame.winnerType = 'undercover'; // Par défaut, mais peut être ajusté
+      updatedGame.winnerType = 'undercover';
       setCurrentGame(updatedGame);
       setGameState('gameEnd');
     } else {
       console.log('🔄 PARTIE CONTINUE !');
       console.log('🔄 Raison: Civils (' + civilsCount + ') > Undercover (' + undercoversCount + ') et assez de joueurs');
 
-      // Décider si on doit redistribuer les mots ou passer direct au vote
-      if (eliminatedRole.type === 'civil') {
-        console.log('👥 Civil éliminé → PASSAGE DIRECT AU VOTE du prochain tour');
-        updatedGame.skipWordDistribution = true;
-        setCurrentGame(updatedGame);
-        setGameState('voting'); // Direct au vote, pas de redistribution
-      } else {
-        console.log('🕵️ Undercover/Blanc éliminé → Redistribution des mots');
-        updatedGame.skipWordDistribution = false;
-
-        // Trouver le premier joueur vivant pour la redistribution
-        let firstAlivePlayer = 0;
-        while (firstAlivePlayer < updatedGame.players.length &&
-          newEliminatedPlayers.includes(firstAlivePlayer)) {
-          firstAlivePlayer++;
-        }
-
-        setCurrentGame(updatedGame);
-        setCurrentPlayer(firstAlivePlayer);
-        setGameState('playing'); // Redistribuer les mots
-      }
+      // PLUS JAMAIS DE REDISTRIBUTION - Les joueurs gardent toujours leur mot
+      console.log(`${eliminatedRole.type === 'civil' ? '👥 Civil' : eliminatedRole.type === 'undercover' ? '🕵️ Undercover' : '⚪ Blanc'} éliminé → PASSAGE DIRECT À LA DISCUSSION (les survivants gardent leur mot)`);
+      updatedGame.skipWordDistribution = true;
+      setCurrentGame(updatedGame);
+      setGameState('discussion'); // Toujours direct à la discussion
     }
   };
 
@@ -220,6 +209,14 @@ export default function Home() {
             currentGame={currentGame}
             currentPlayer={currentPlayer}
             onNextPlayer={nextPlayer}
+            onResetGame={resetGame}
+          />
+        )}
+
+        {gameState === 'discussion' && (
+          <GameDiscussion
+            currentGame={currentGame}
+            onStartVoting={startVoting}
             onResetGame={resetGame}
           />
         )}

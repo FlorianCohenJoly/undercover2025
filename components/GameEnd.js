@@ -12,30 +12,18 @@ const GameEnd = ({ currentGame, onResetGame }) => {
             };
         }
 
-        const remainingPlayers = currentGame.players.filter((_, index) =>
-            !currentGame.eliminatedPlayers.includes(index)
-        );
-
-        const remainingRoles = remainingPlayers.map((_, playerIndex) => {
-            const originalIndex = currentGame.players.findIndex(p => p === remainingPlayers[playerIndex]);
-            return currentGame.roles[originalIndex];
-        });
-
-        const civilsCount = remainingRoles.filter(role => role.type === 'civil').length;
-        const undercoversCount = remainingRoles.filter(role => role.type === 'undercover').length;
-
         // Conditions de victoire normales
-        if (currentGame.winnerType === 'civils' || undercoversCount === 0) {
+        if (currentGame.winnerType === 'civils') {
             return {
                 winners: 'civils',
                 message: '🎉 Les Civils ont gagné !',
                 description: 'Tous les Undercover ont été éliminés !'
             };
-        } else if (currentGame.winnerType === 'undercover' || undercoversCount >= civilsCount) {
+        } else if (currentGame.winnerType === 'undercover') {
             return {
                 winners: 'undercover',
                 message: '🕵️ Les Undercover ont gagné !',
-                description: 'Les Undercover sont aussi nombreux que les Civils !'
+                description: 'Les Undercover ont réussi à dominer numériquement !'
             };
         }
 
@@ -47,9 +35,6 @@ const GameEnd = ({ currentGame, onResetGame }) => {
     };
 
     const winInfo = getWinners();
-    const remainingPlayers = currentGame.players.filter((_, index) =>
-        !currentGame.eliminatedPlayers.includes(index)
-    );
 
     return (
         <div className="gradient-bg p-4">
@@ -100,11 +85,16 @@ const GameEnd = ({ currentGame, onResetGame }) => {
                         {currentGame.players.map((player, index) => {
                             const role = currentGame.roles[index];
                             const isEliminated = currentGame.eliminatedPlayers.includes(index);
-                            const isSpecialWinner = winInfo.winners === 'white' && player === currentGame.winner;
-                            const isNormalWinner = !isSpecialWinner && !isEliminated && (
-                                (winInfo.winners === 'civils' && role.type === 'civil') ||
-                                (winInfo.winners === 'undercover' && role.type === 'undercover')
-                            );
+
+                            // Déterminer qui a gagné
+                            let isWinner = false;
+                            if (winInfo.winners === 'white' && player === currentGame.winner) {
+                                isWinner = true; // Le Blanc qui a deviné
+                            } else if (winInfo.winners === 'civils' && role.type === 'civil' && !isEliminated) {
+                                isWinner = true; // Civils survivants
+                            } else if (winInfo.winners === 'undercover' && role.type === 'undercover' && !isEliminated) {
+                                isWinner = true; // Undercover survivants
+                            }
 
                             return (
                                 <div
@@ -117,8 +107,10 @@ const GameEnd = ({ currentGame, onResetGame }) => {
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold text-gray-800">{player}</span>
                                         {isEliminated && <span className="text-red-600">❌</span>}
-                                        {isSpecialWinner && <span className="text-yellow-600">👑⚪</span>}
-                                        {isNormalWinner && <span className="text-yellow-600">👑</span>}
+                                        {isWinner && <span className="text-yellow-600">👑</span>}
+                                        {winInfo.winners === 'white' && player === currentGame.winner && (
+                                            <span className="text-yellow-600">⚪👑</span>
+                                        )}
                                     </div>
                                     <div className="text-right">
                                         <span className={`badge-${role.type}`}>
@@ -132,11 +124,25 @@ const GameEnd = ({ currentGame, onResetGame }) => {
                                         {role.type === 'white' && !role.word && (
                                             <p className="text-sm text-gray-600 mt-1">Pas de mot</p>
                                         )}
-                                        {isSpecialWinner && (
+                                        {isWinner && winInfo.winners === 'white' && player === currentGame.winner && (
                                             <p className="text-sm text-yellow-600 mt-1 font-bold">
                                                 A deviné : "{currentGame.guessedWord}"
                                             </p>
                                         )}
+
+                                        {/* Status de victoire/défaite */}
+                                        <p className="text-xs mt-1 font-semibold">
+                                            {isWinner && <span className="text-green-600">🎉 GAGNANT</span>}
+                                            {!isWinner && winInfo.winners === 'civils' && (role.type === 'undercover' || role.type === 'white') && (
+                                                <span className="text-red-600">💀 PERDANT</span>
+                                            )}
+                                            {!isWinner && winInfo.winners === 'undercover' && (role.type === 'civil' || role.type === 'white') && (
+                                                <span className="text-red-600">💀 PERDANT</span>
+                                            )}
+                                            {!isWinner && winInfo.winners === 'white' && role.type !== 'white' && (
+                                                <span className="text-red-600">💀 PERDANT</span>
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                             );

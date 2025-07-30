@@ -8,6 +8,23 @@ const GamePlay = ({
 }) => {
     const [showWord, setShowWord] = useState(false);
 
+    // Filtrer les joueurs encore en vie
+    const alivePlayers = currentGame.players.filter((_, index) =>
+        !currentGame.eliminatedPlayers.includes(index)
+    );
+
+    // Trouver l'index du joueur actuel parmi les vivants
+    const alivePlayerIndex = alivePlayers.findIndex(player =>
+        player === currentGame.players[currentPlayer]
+    );
+
+    // Si le joueur actuel est éliminé, passer au suivant
+    React.useEffect(() => {
+        if (currentGame.eliminatedPlayers.includes(currentPlayer)) {
+            onNextPlayer();
+        }
+    }, [currentPlayer, currentGame.eliminatedPlayers, onNextPlayer]);
+
     const getCurrentRole = () => {
         if (!currentGame) return null;
         return currentGame.roles[currentPlayer];
@@ -25,11 +42,14 @@ const GamePlay = ({
             <div className="max-w-lg mx-auto">
                 <div className="card p-8 text-center fade-in">
                     <div className="mb-6">
+                        <div className="round-indicator">
+                            🎮 Tour {currentGame.round}
+                        </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">
                             Tour de {currentGame.players[currentPlayer]}
                         </h2>
                         <p className="text-gray-600">
-                            Joueur {currentPlayer + 1} sur {currentGame.players.length}
+                            Joueur {alivePlayerIndex + 1} sur {alivePlayers.length} encore en vie
                         </p>
                     </div>
 
@@ -41,31 +61,36 @@ const GamePlay = ({
                                 </p>
                                 <button
                                     onClick={() => setShowWord(true)}
-                                    className="w-full p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all text-lg font-semibold"
+                                    className="w-full p-4 btn-green rounded-lg text-lg font-semibold"
                                 >
                                     👁️ Voir mon mot
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-6">
-                                <div className="p-6 bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl">
-                                    {/* <p className="text-sm text-gray-600 mb-2">Votre rôle :</p>
-                                    <p className={`text-lg font-bold mb-4 ${role.type === 'civil' ? 'text-green-600' :
-                                            role.type === 'undercover' ? 'text-red-600' :
-                                                'text-gray-600'
-                                        }`}>
-                                        {role.type === 'civil' && '👥 Civil'}
-                                        {role.type === 'undercover' && '🕵️ Undercover'}
-                                        {role.type === 'white' && '⚪ Blanc'}
-                                    </p> */}
-
+                                <div className="word-display">
                                     {role.word ? (
                                         <div>
                                             <p className="text-sm text-gray-600 mb-2">Votre mot :</p>
                                             <p className="text-3xl font-bold text-gray-800">{role.word}</p>
+                                            <p className="text-sm text-gray-500 mt-4">
+                                                💡 Donnez un indice sur ce mot sans le dire explicitement
+                                            </p>
                                         </div>
                                     ) : (
-                                        <p className="text-xl text-gray-700">Vous n&apos;avez pas de mot !</p>
+                                        <div>
+                                            <p className="text-2xl font-bold text-gray-600 mb-4">⚪ Vous êtes BLANC</p>
+                                            <p className="text-lg text-gray-700 mb-4">Vous n'avez pas de mot !</p>
+                                            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg text-left">
+                                                <p className="text-sm text-yellow-800">
+                                                    <strong>Votre mission :</strong><br />
+                                                    • Écoutez les indices des autres joueurs<br />
+                                                    • Essayez de deviner leur mot secret<br />
+                                                    • Bluffez en donnant un indice crédible<br />
+                                                    • Si vous êtes éliminé, vous pourrez tenter de deviner le mot des Civils pour gagner instantly !
+                                                </p>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 
@@ -73,7 +98,7 @@ const GamePlay = ({
                                     onClick={handleNextPlayer}
                                     className="w-full p-4 btn-primary rounded-lg text-lg font-semibold"
                                 >
-                                    🔄 {currentPlayer < currentGame.players.length - 1 ? 'Joueur suivant' : 'Commencer les votes'}
+                                    🔄 {alivePlayerIndex < alivePlayers.length - 1 ? 'Joueur suivant' : 'Commencer la discussion'}
                                 </button>
                             </div>
                         )}
